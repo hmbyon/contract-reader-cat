@@ -1,0 +1,28 @@
+{
+  "work-01.txt": [
+    {"clause": "제4조", "criteria_id": "W-02", "expected": "risk", "confirmed": false},
+    {"clause": "제5조", "criteria_id": "W-05", "expected": "risk", "confirmed": false},
+    {"clause": "제6조", "criteria_id": "W-04", "expected": "risk", "confirmed": false},
+    {"clause": "제7조", "criteria_id": "W-03", "expected": "risk", "confirmed": false},
+    {"clause": "제9조", "criteria_id": "W-06", "expected": "risk", "confirmed": false},
+    {"clause": "제1조", "criteria_id": null, "expected": "clean", "confirmed": false},
+    {"clause": "제2조", "criteria_id": null, "expected": "clean", "confirmed": false},
+    {"clause": "제3조", "criteria_id": null, "expected": "clean", "confirmed": false},
+    {"clause": "제8조", "criteria_id": null, "expected": "clean", "confirmed": false},
+    {"clause": "제10조", "criteria_id": null, "expected": "clean", "confirmed": false},
+    {"clause": "제11조", "criteria_id": null, "expected": "clean", "confirmed": false}
+  ],
+  "rent-01.txt": [
+    {"clause": "제3조", "criteria_id": "R-04", "expected": "risk", "confirmed": false},
+    {"clause": "제4조", "criteria_id": "R-03", "expected": "risk", "confirmed": false},
+    {"clause": "제5조", "criteria_id": "R-06", "expected": "risk", "confirmed": false},
+    {"clause": "제6조", "criteria_id": "R-05", "expected": "risk", "confirmed": false},
+    {"clause": "제7조", "criteria_id": "R-05", "expected": "risk", "confirmed": false},
+    {"clause": "제8조", "criteria_id": "R-02", "expected": "risk", "confirmed": false},
+    {"clause": "제9조", "criteria_id": "C-03", "expected": "risk", "confirmed": false},
+    {"clause": "제10조", "criteria_id": "C-04", "expected": "risk", "confirmed": false},
+    {"clause": "제1조", "criteria_id": null, "expected": "clean", "confirmed": false},
+    {"clause": "제2조", "criteria_id": null, "expected": "clean", "confirmed": false},
+    {"clause": "제11조", "criteria_id": null, "expected": "clean", "confirmed": false}
+  ]
+}

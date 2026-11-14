@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "check:criteria": "node scripts/check-criteria.mjs"
+    "check:criteria": "node scripts/check-criteria.mjs",
+    "check:samples": "node scripts/check-samples.mjs"
   },
   "dependencies": {
     "next": "16.4.6",
