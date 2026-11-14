@@ -14,6 +14,10 @@ const INTERACTIONS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/
 const TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 2; // 최초 1회 + JSON 파싱 실패 시 1회 재시도
 
+// 일시적 오류로 보는 HTTP status. 이 값일 때만 1초, 2초 순서로 대기하며 최대 2회 재시도한다.
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+const HTTP_RETRY_DELAYS_MS = [1000, 2000];
+
 function getModel(): string {
   const model = process.env.GEMINI_MODEL;
 
@@ -24,39 +28,59 @@ function getModel(): string {
   return model;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function callInteractions(prompt: string): Promise<unknown> {
   const apiKey = getGeminiApiKey();
   const model = getModel();
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const maxAttempts = HTTP_RETRY_DELAYS_MS.length + 1; // 최초 1회 + 일시적 오류 재시도 최대 2회
 
-  try {
-    const response = await fetch(INTERACTIONS_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        model,
-        input: prompt,
-        response_format: {
-          type: "text",
-          mime_type: "application/json",
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(INTERACTIONS_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
         },
-      }),
-      signal: controller.signal,
-    });
+        body: JSON.stringify({
+          model,
+          input: prompt,
+          response_format: {
+            type: "text",
+            mime_type: "application/json",
+          },
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
-    if (!response.ok) {
+    if (response.ok) {
+      return await response.json();
+    }
+
+    if (!RETRYABLE_STATUSES.has(response.status)) {
       throw new Error(`Gemini API 요청이 실패했습니다 (status ${response.status})`);
     }
 
-    return await response.json();
-  } finally {
-    clearTimeout(timer);
+    if (attempt === maxAttempts) {
+      throw new Error(`Gemini API 요청이 실패했습니다 (status ${response.status}, 재시도 ${attempt - 1}회)`);
+    }
+
+    await sleep(HTTP_RETRY_DELAYS_MS[attempt - 1]);
   }
+
+  // 위 루프는 항상 return 또는 throw로 끝난다. 타입 체커를 위한 안전망.
+  throw new Error("Gemini API 요청이 실패했습니다");
 }
 
 /**
