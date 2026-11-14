@@ -1,0 +1,16 @@
+[
+  {
+    "id": "C-01",
+    "type": "common",
+    "title": "임시 문구 - 계약 당사자 정보 일치",
+    "question": "임시 문구 - 계약서상 당사자 정보(이름, 주소, 연락처)가 실제 당사자와 일치하는가?",
+    "risk_signals": ["임시 문구 - 서명란 공백", "임시 문구 - 주소 불일치"],
+    "basis": {
+      "law": "민법",
+      "article": "임시 문구 - 제105조",
+      "verified": false
+    },
+    "severity_default": "low",
+    "user_question": "임시 문구 - 계약서에 적힌 상대방 정보가 맞는지 확인하셨나요?"
+  }
+]

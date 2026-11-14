@@ -1,0 +1,16 @@
+[
+  {
+    "id": "R-03",
+    "type": "rent",
+    "title": "임시 문구 - 보증금 반환 조건",
+    "question": "임시 문구 - 계약 종료 시 보증금 반환 시기와 조건이 명확히 기재되어 있는가?",
+    "risk_signals": ["임시 문구 - 반환 시기 미기재", "임시 문구 - 공제 항목 불명확"],
+    "basis": {
+      "law": "주택임대차보호법",
+      "article": "임시 문구 - 제3조의2",
+      "verified": false
+    },
+    "severity_default": "high",
+    "user_question": "임시 문구 - 보증금은 언제까지 돌려받기로 되어 있나요?"
+  }
+]
