@@ -11,12 +11,17 @@ import { getGeminiApiKey } from "./env";
  */
 
 const INTERACTIONS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
-const TIMEOUT_MS = 20_000;
+const DEFAULT_TIMEOUT_MS = 45_000;
 const MAX_ATTEMPTS = 2; // 최초 1회 + JSON 파싱 실패 시 1회 재시도
 
 // 일시적 오류로 보는 HTTP status. 이 값일 때만 1초, 2초 순서로 대기하며 최대 2회 재시도한다.
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 const HTTP_RETRY_DELAYS_MS = [1000, 2000];
+
+export interface GenerateJsonOptions {
+  thinkingLevel?: "low" | "medium" | "high";
+  timeoutMs?: number;
+}
 
 function getModel(): string {
   const model = process.env.GEMINI_MODEL;
@@ -32,15 +37,35 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function callInteractions(prompt: string): Promise<unknown> {
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+async function callInteractions(prompt: string, options?: GenerateJsonOptions): Promise<unknown> {
   const apiKey = getGeminiApiKey();
   const model = getModel();
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+  const requestBody: Record<string, unknown> = {
+    model,
+    input: prompt,
+    response_format: {
+      type: "text",
+      mime_type: "application/json",
+    },
+  };
+
+  // thinking_level은 generation_config 안에 넣는다 (ai.google.dev Interactions API 문서 기준).
+  if (options?.thinkingLevel) {
+    requestBody.generation_config = { thinking_level: options.thinkingLevel };
+  }
 
   const maxAttempts = HTTP_RETRY_DELAYS_MS.length + 1; // 최초 1회 + 일시적 오류 재시도 최대 2회
+  let timeoutRetried = false; // 타임아웃(AbortError)은 이 재시도 횟수와 별도로 1회만 재시도한다.
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     let response: Response;
     try {
@@ -50,16 +75,19 @@ async function callInteractions(prompt: string): Promise<unknown> {
           "Content-Type": "application/json",
           "x-goog-api-key": apiKey,
         },
-        body: JSON.stringify({
-          model,
-          input: prompt,
-          response_format: {
-            type: "text",
-            mime_type: "application/json",
-          },
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
+    } catch (error) {
+      if (isAbortError(error)) {
+        if (!timeoutRetried) {
+          timeoutRetried = true;
+          attempt -= 1; // 상태코드 재시도 횟수를 소모하지 않고 한 번 더 시도한다.
+          continue;
+        }
+        throw new Error("Gemini API 응답 시간 초과");
+      }
+      throw error;
     } finally {
       clearTimeout(timer);
     }
@@ -127,11 +155,11 @@ function extractOutputText(raw: unknown): string {
   throw new Error("Gemini API 응답에서 결과 텍스트를 찾을 수 없습니다");
 }
 
-export async function generateJson(prompt: string): Promise<unknown> {
+export async function generateJson(prompt: string, options?: GenerateJsonOptions): Promise<unknown> {
   let lastError: unknown;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const raw = await callInteractions(prompt);
+    const raw = await callInteractions(prompt, options);
 
     let text: string;
     try {

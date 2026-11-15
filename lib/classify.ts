@@ -58,6 +58,6 @@ export async function classifyContract(text: string): Promise<ClassifyResult> {
   }
 
   const masked = maskPII(text);
-  const raw = await generateJson(buildPrompt(masked));
+  const raw = await generateJson(buildPrompt(masked), { thinkingLevel: "low" });
   return sanitizeResult(raw);
 }
