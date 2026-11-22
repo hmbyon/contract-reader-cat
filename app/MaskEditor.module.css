@@ -1,0 +1,163 @@
+.editor {
+  --text: #3a2f2a;
+  --muted: #6f6358;
+  --border: #eadfc6;
+  --butter: #ffd95a;
+  --butter-deep: #f2c230;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  background: #fffdf8;
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  padding: 1rem;
+  color: var(--text);
+}
+
+.guide {
+  background: #fff1b8;
+  border: 1px solid var(--butter-deep);
+  border-radius: 16px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.preparing,
+.hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.topRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.progress {
+  font-family: var(--font-jua), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 1.15rem;
+}
+
+.pager,
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.toolButton,
+.cancelButton,
+.readButton {
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 999px;
+  min-height: 44px;
+}
+
+.toolButton {
+  background: #fffdf8;
+  border: 2px solid var(--border);
+  padding: 0.3rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.toolButton[aria-pressed="true"] {
+  background: var(--butter);
+  border-color: var(--butter-deep);
+}
+
+.toolButton:disabled,
+.cancelButton:disabled {
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.toolButton:focus-visible,
+.cancelButton:focus-visible,
+.readButton:focus-visible,
+.confirm input:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 3px;
+}
+
+.canvasWrap {
+  display: flex;
+  justify-content: center;
+  background: #f1e8cf;
+  border-radius: 14px;
+  padding: 0.5rem;
+}
+
+.canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  cursor: crosshair;
+  touch-action: none;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(60, 40, 10, 0.18);
+}
+
+.confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  min-height: 44px;
+}
+
+.confirm input {
+  width: 22px;
+  height: 22px;
+  accent-color: #c28a00;
+}
+
+.footerRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+
+.cancelButton {
+  background: #fffdf8;
+  border: 2px solid var(--border);
+  padding: 0.4rem 1.1rem;
+  font-weight: 600;
+}
+
+.readButton {
+  background: var(--butter);
+  border: 2px solid var(--butter-deep);
+  padding: 0.6rem 1.8rem;
+  font-family: var(--font-jua), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 1.15rem;
+  box-shadow: 0 4px 0 var(--butter-deep);
+}
+
+.readButton:disabled {
+  background: #f1e8cf;
+  border-color: var(--border);
+  color: var(--muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .readButton {
+    width: 100%;
+  }
+
+  .cancelButton {
+    width: 100%;
+  }
+}

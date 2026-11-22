@@ -311,6 +311,114 @@
   font-weight: 600;
 }
 
+/* ---------- upload ---------- */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  border: 2px dashed var(--border);
+  border-radius: 20px;
+  background: #fffefb;
+  padding: 1rem;
+  text-align: center;
+}
+
+.dropzoneActive {
+  border-color: var(--butter-deep);
+  background: #fff6d6;
+}
+
+.fileInput {
+  display: none;
+}
+
+.uploadButton {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text);
+  background: var(--butter);
+  border: 2px solid var(--butter-deep);
+  border-radius: 999px;
+  min-height: 44px;
+  padding: 0.5rem 1.4rem;
+}
+
+.uploadButton:disabled {
+  background: #f1e8cf;
+  border-color: var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.dropHint {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  background: #fff1b8;
+  border: 1px solid var(--butter-deep);
+  border-radius: 999px;
+  padding: 0.1rem 0.2rem 0.1rem 0.8rem;
+  font-size: 0.88rem;
+}
+
+.chipName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 14rem;
+}
+
+.chipRemove {
+  font: inherit;
+  cursor: pointer;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  line-height: 1;
+}
+
+.chipRemove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.uploadError {
+  background: #fff0e6;
+  color: #8a2c0d;
+  border: 2px solid #e8a27c;
+  border-radius: 14px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.ocrNote {
+  background: #fff6d6;
+  border: 1px solid var(--butter-deep);
+  border-radius: 14px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
 /* ---------- loading ---------- */
 .loading {
   text-align: center;

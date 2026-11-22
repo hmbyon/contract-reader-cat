@@ -18,6 +18,10 @@ const MAX_ATTEMPTS = 2; // 최초 1회 + JSON 파싱 실패 시 1회 재시도
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 const HTTP_RETRY_DELAYS_MS = [1000, 2000];
 
+export type InteractionInputPart =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mime_type: string };
+
 export interface GenerateJsonOptions {
   thinkingLevel?: "low" | "medium" | "high";
   timeoutMs?: number;
@@ -41,19 +45,30 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
-async function callInteractions(prompt: string, options?: GenerateJsonOptions): Promise<unknown> {
+interface InteractionOptions extends GenerateJsonOptions {
+  // true이면 JSON 응답 형식 지정 없이 일반 텍스트로 받는다.
+  plainText?: boolean;
+}
+
+async function callInteractions(
+  input: string | InteractionInputPart[],
+  options?: InteractionOptions
+): Promise<unknown> {
   const apiKey = getGeminiApiKey();
   const model = getModel();
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   const requestBody: Record<string, unknown> = {
     model,
-    input: prompt,
-    response_format: {
+    input,
+  };
+
+  if (!options?.plainText) {
+    requestBody.response_format = {
       type: "text",
       mime_type: "application/json",
-    },
-  };
+    };
+  }
 
   // thinking_level은 generation_config 안에 넣는다 (ai.google.dev Interactions API 문서 기준).
   if (options?.thinkingLevel) {
@@ -178,4 +193,32 @@ export async function generateJson(prompt: string, options?: GenerateJsonOptions
   }
 
   throw lastError instanceof Error ? lastError : new Error("Gemini API 응답을 처리할 수 없습니다");
+}
+
+export interface ImageInput {
+  mimeType: string;
+  /** base64 (data: 접두어 없음) */
+  data: string;
+}
+
+/**
+ * 이미지(들)와 프롬프트를 보내 일반 텍스트를 돌려받는다. (OCR 등)
+ * 이미지 데이터·프롬프트·응답 본문은 로그나 에러 메시지에 넣지 않는다.
+ */
+export async function generateTextFromImages(
+  prompt: string,
+  images: ImageInput[],
+  options?: GenerateJsonOptions
+): Promise<string> {
+  const input: InteractionInputPart[] = [
+    { type: "text", text: prompt },
+    ...images.map((image) => ({
+      type: "image" as const,
+      data: image.data,
+      mime_type: image.mimeType,
+    })),
+  ];
+
+  const raw = await callInteractions(input, { ...options, plainText: true });
+  return extractOutputText(raw);
 }

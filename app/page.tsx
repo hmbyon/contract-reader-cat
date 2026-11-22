@@ -1,11 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { AnalyzeResult, Finding } from "@/lib/analyze";
 import { SAMPLES } from "@/lib/samples";
+import MaskEditor from "./MaskEditor";
 import styles from "./page.module.css";
 
 const FAILURE_MESSAGE = "분석에 실패했습니다. 잠시 후 다시 시도해 주세요";
+
+const MAX_IMAGES = 5;
+const MAX_TEXT_FILE_BYTES = 200 * 1024;
+const MAX_IMAGE_FILE_BYTES = 20 * 1024 * 1024;
+const READ_FAILURE_MESSAGE = "글자 읽기에 실패했어요. 잠시 후 다시 시도해 주세요";
+const UNREADABLE_TOKEN = "[판독불가]";
+
+function isTextFile(file: File): boolean {
+  return file.type === "text/plain" || /\.txt$/i.test(file.name);
+}
+
+function isPdfFile(file: File): boolean {
+  return file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+}
+
+function isImageFile(file: File): boolean {
+  return file.type.startsWith("image/");
+}
+
+async function readTextFile(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+  } catch {
+    return new TextDecoder("euc-kr").decode(buffer);
+  }
+}
+
+interface FileChip {
+  id: number;
+  name: string;
+}
 
 const TYPE_LABEL: Record<AnalyzeResult["type"], string> = {
   work: "근로계약서",
@@ -104,6 +137,137 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalyzeResult | null>(null);
 
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
+  const [chips, setChips] = useState<FileChip[]>([]);
+  const [reading, setReading] = useState(false);
+  const [ocrNote, setOcrNote] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const chipIdRef = useRef(0);
+
+  function nextChipId() {
+    chipIdRef.current += 1;
+    return chipIdRef.current;
+  }
+
+  async function handleFiles(fileList: FileList | File[]) {
+    const files = Array.from(fileList);
+    if (files.length === 0 || reading) return;
+    setUploadError(null);
+
+    if (files.some(isPdfFile)) {
+      setUploadError("PDF는 아직 지원하지 않아요. 화면을 캡처하거나 사진으로 찍어 올려 주세요");
+      return;
+    }
+
+    const texts = files.filter(isTextFile);
+    const images = files.filter((file) => !isTextFile(file) && isImageFile(file));
+
+    if (texts.length + images.length !== files.length) {
+      setUploadError("지원하지 않는 형식이에요. 사진(JPG·PNG 등)이나 .txt 파일을 올려 주세요");
+      return;
+    }
+    if (texts.length > 0 && images.length > 0) {
+      setUploadError("텍스트 파일과 사진은 따로 올려 주세요");
+      return;
+    }
+
+    if (texts.length > 0) {
+      if (texts.length > 1) {
+        setUploadError("텍스트 파일은 한 번에 하나만 올릴 수 있어요");
+        return;
+      }
+      const file = texts[0];
+      if (file.size > MAX_TEXT_FILE_BYTES) {
+        setUploadError("텍스트 파일이 너무 커요. 200KB 이하로 올려 주세요");
+        return;
+      }
+      try {
+        setText(await readTextFile(file));
+        setPendingImages([]);
+        setOcrNote(false);
+        setChips([{ id: nextChipId(), name: file.name }]);
+      } catch {
+        setUploadError("파일을 읽지 못했어요. 다시 시도해 주세요");
+      }
+      return;
+    }
+
+    if (images.length > MAX_IMAGES) {
+      setUploadError(`사진은 최대 ${MAX_IMAGES}장까지 올릴 수 있어요`);
+      return;
+    }
+    if (images.some((file) => file.size > MAX_IMAGE_FILE_BYTES)) {
+      setUploadError("사진 용량이 너무 커요. 20MB 이하로 올려 주세요");
+      return;
+    }
+
+    setChips(images.map((file) => ({ id: nextChipId(), name: file.name })));
+    setPendingImages(images);
+  }
+
+  function handleRemoveChip(id: number, index: number) {
+    setChips((prev) => prev.filter((chip) => chip.id !== id));
+    // 가리기 대기 중인 사진이면 목록에서도 뺀다. 입력창 내용은 그대로 둔다.
+    setPendingImages((prev) => (prev.length > 0 ? prev.filter((_, i) => i !== index) : prev));
+  }
+
+  function handleMaskCancel() {
+    setPendingImages([]);
+    setChips([]);
+  }
+
+  async function handleMaskSubmit(jpegDataUrls: string[]) {
+    if (reading) return;
+    const names = chips.map((chip) => chip.name);
+
+    setReading(true);
+    setUploadError(null);
+
+    try {
+      const response = await fetch("/api/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          files: jpegDataUrls.map((url) => ({
+            mimeType: "image/jpeg",
+            data: url.replace(/^data:image\/jpeg;base64,/, ""),
+          })),
+        }),
+      });
+
+      if (response.ok) {
+        const data = (await response.json()) as { text?: unknown };
+        if (typeof data.text === "string" && data.text.trim().length > 0) {
+          setText(data.text);
+          setOcrNote(true);
+          setPendingImages([]); // 가리기 화면을 닫으면서 canvas를 해제한다.
+          setChips(names.map((name) => ({ id: nextChipId(), name })));
+        } else {
+          setUploadError("글자를 읽지 못했어요. 사진을 더 선명하게 찍어 다시 올려 주세요");
+        }
+      } else if (response.status === 400 || response.status === 422) {
+        let message = READ_FAILURE_MESSAGE;
+        try {
+          const data = (await response.json()) as { error?: unknown };
+          if (typeof data.error === "string" && data.error) message = data.error;
+        } catch {
+          // 본문을 읽지 못하면 기본 문구를 쓴다.
+        }
+        setUploadError(message);
+      } else {
+        setUploadError(READ_FAILURE_MESSAGE);
+      }
+    } catch {
+      setUploadError(READ_FAILURE_MESSAGE);
+    } finally {
+      setReading(false);
+    }
+  }
+
+  const showOcrNote = ocrNote && text !== SAMPLES.work && text !== SAMPLES.rent;
+
   async function handleAnalyze() {
     if (loading || text.trim().length === 0) return;
 
@@ -190,6 +354,91 @@ export default function Home() {
             <p className={styles.banner} role="note">
               가상 계약서만 입력하세요. 실제 이름·연락처·주민번호는 넣지 마세요.
             </p>
+            {pendingImages.length > 0 ? (
+              <MaskEditor
+                files={pendingImages}
+                busy={reading}
+                onCancel={handleMaskCancel}
+                onError={(message) => {
+                  setUploadError(message);
+                  handleMaskCancel();
+                }}
+                onSubmit={handleMaskSubmit}
+              />
+            ) : (
+              <div
+                className={`${styles.dropzone} ${dragging ? styles.dropzoneActive : ""}`}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setDragging(false);
+                  void handleFiles(event.dataTransfer.files);
+                }}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.txt,text/plain"
+                  className={styles.fileInput}
+                  tabIndex={-1}
+                  onChange={(event) => {
+                    void handleFiles(event.target.files ?? []);
+                    event.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  className={styles.uploadButton}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={reading}
+                >
+                  사진 올리기
+                </button>
+                <p className={styles.dropHint}>
+                  계약서 사진(최대 5장)이나 .txt 파일을 여기에 끌어다 놓아도 돼요
+                </p>
+              </div>
+            )}
+
+            {chips.length > 0 && (
+              <ul className={styles.chips}>
+                {chips.map((chip, index) => (
+                  <li key={chip.id} className={styles.chip}>
+                    <span className={styles.chipName}>{chip.name}</span>
+                    <button
+                      type="button"
+                      className={styles.chipRemove}
+                      onClick={() => handleRemoveChip(chip.id, index)}
+                      aria-label={`${chip.name} 지우기`}
+                      disabled={reading}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {uploadError && (
+              <p className={styles.uploadError} role="alert">
+                {uploadError}
+              </p>
+            )}
+
+            {showOcrNote && (
+              <div className={styles.ocrNote} role="note">
+                <p>사진에서 읽은 글자는 틀릴 수 있어요. 확인하고 고친 뒤 점검해 주세요.</p>
+                {text.includes(UNREADABLE_TOKEN) && (
+                  <p>[판독불가] 부분은 직접 채워 주세요</p>
+                )}
+              </div>
+            )}
+
             <label htmlFor="contract-text" className={styles.label}>
               계약서 내용
             </label>
@@ -220,13 +469,21 @@ export default function Home() {
                 type="button"
                 className={styles.primaryButton}
                 onClick={handleAnalyze}
-                disabled={loading || text.trim().length === 0}
+                disabled={loading || reading || text.trim().length === 0}
               >
                 {loading ? "점검 중…" : "점검하기"}
               </button>
             </div>
           </div>
         </section>
+
+        {reading && (
+          <div className={styles.loading} role="status">
+            <p className={styles.loadingText}>
+              <span className={styles.loadingMark}>계읽냥이 글자를 읽는 중…</span>
+            </p>
+          </div>
+        )}
 
         {loading && (
           <div className={styles.loading} role="status">
