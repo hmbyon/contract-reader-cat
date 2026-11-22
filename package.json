@@ -9,7 +9,8 @@
     "check:criteria": "node scripts/check-criteria.mjs",
     "check:samples": "node scripts/check-samples.mjs",
     "check:split": "node scripts/check-split.mjs",
-    "check:classify": "node scripts/check-classify.mjs"
+    "check:classify": "node scripts/check-classify.mjs",
+    "check:analyze": "node scripts/check-analyze.mjs"
   },
   "dependencies": {
     "next": "16.4.6",
