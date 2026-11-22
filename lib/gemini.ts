@@ -14,9 +14,16 @@ const INTERACTIONS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/
 const DEFAULT_TIMEOUT_MS = 45_000;
 const MAX_ATTEMPTS = 2; // 최초 1회 + JSON 파싱 실패 시 1회 재시도
 
-// 일시적 오류로 보는 HTTP status. 이 값일 때만 1초, 2초 순서로 대기하며 최대 2회 재시도한다.
+// 일시적 오류로 보는 HTTP status. 이 값일 때만 대기 후 최대 3회 재시도한다(총 4번 시도).
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
-const HTTP_RETRY_DELAYS_MS = [1000, 2000];
+const HTTP_RETRY_DELAYS_MS = [1500, 3000, 6000];
+const RETRY_JITTER_MAX_MS = 500; // 대기 시간마다 0~500ms 무작위를 더한다.
+const MAX_RETRY_AFTER_MS = 8000; // Retry-After 헤더 값의 상한
+
+// 호출 한 번(재시도 포함)의 총 시간 예산. /api/analyze는 호출 2번(유형 판별 + 기준표 매칭)을
+// 순서대로 하므로 28초 × 2가 maxDuration(60초) 안에 들어와야 한다.
+const DEFAULT_JSON_BUDGET_MS = 28_000;
+const DEFAULT_IMAGES_BUDGET_MS = 50_000;
 
 export type InteractionInputPart =
   | { type: "text"; text: string }
@@ -24,7 +31,10 @@ export type InteractionInputPart =
 
 export interface GenerateJsonOptions {
   thinkingLevel?: "low" | "medium" | "high";
+  /** 시도 한 번의 타임아웃. 남은 시간 예산보다 길 수는 없다. */
   timeoutMs?: number;
+  /** 호출 한 번(재시도 포함)의 총 시간 예산. 기본값은 호출 종류에 따라 다르다. */
+  budgetMs?: number;
 }
 
 function getModel(): string {
@@ -45,25 +55,67 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
+type CallKind = "json" | "images";
+
 interface InteractionOptions extends GenerateJsonOptions {
   // true이면 JSON 응답 형식 지정 없이 일반 텍스트로 받는다.
   plainText?: boolean;
+  kind: CallKind;
+  /** 이 시각(epoch ms)까지 호출이 끝나야 한다. */
+  deadline: number;
+}
+
+function retryDelayMs(retryIndex: number, response: Response): number {
+  const header = response.headers.get("retry-after");
+  if (header !== null) {
+    const seconds = Number(header);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      return Math.min(seconds * 1000, MAX_RETRY_AFTER_MS);
+    }
+  }
+  return HTTP_RETRY_DELAYS_MS[retryIndex] + Math.random() * RETRY_JITTER_MAX_MS;
+}
+
+/** 오류 응답에서 error.status 문자열(예: UNAVAILABLE)만 꺼낸다. 본문 나머지는 읽고 버린다. */
+async function readErrorStatus(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.json()) as { error?: { status?: unknown } };
+    const status = body?.error?.status;
+    return typeof status === "string" && /^[A-Z_]{1,40}$/.test(status) ? status : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** 실패한 시도마다 한 줄. 프롬프트·계약서·이미지·응답 본문·키는 남기지 않는다. */
+function logAttempt(
+  kind: CallKind,
+  attempt: number,
+  model: string,
+  startedAt: number,
+  status: number | "timeout" | "network",
+  errorStatus?: string
+) {
+  console.error(
+    `[gemini] kind=${kind} attempt=${attempt} status=${status}` +
+      `${errorStatus ? ` errorStatus=${errorStatus}` : ""} model=${model} elapsedMs=${Date.now() - startedAt}`
+  );
 }
 
 async function callInteractions(
   input: string | InteractionInputPart[],
-  options?: InteractionOptions
+  options: InteractionOptions
 ): Promise<unknown> {
   const apiKey = getGeminiApiKey();
   const model = getModel();
-  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const attemptTimeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   const requestBody: Record<string, unknown> = {
     model,
     input,
   };
 
-  if (!options?.plainText) {
+  if (!options.plainText) {
     requestBody.response_format = {
       type: "text",
       mime_type: "application/json",
@@ -71,16 +123,25 @@ async function callInteractions(
   }
 
   // thinking_level은 generation_config 안에 넣는다 (ai.google.dev Interactions API 문서 기준).
-  if (options?.thinkingLevel) {
+  if (options.thinkingLevel) {
     requestBody.generation_config = { thinking_level: options.thinkingLevel };
   }
 
-  const maxAttempts = HTTP_RETRY_DELAYS_MS.length + 1; // 최초 1회 + 일시적 오류 재시도 최대 2회
+  const maxAttempts = HTTP_RETRY_DELAYS_MS.length + 1; // 최초 1회 + 일시적 오류 재시도 최대 3회
   let timeoutRetried = false; // 타임아웃(AbortError)은 이 재시도 횟수와 별도로 1회만 재시도한다.
+  let tryNo = 0; // 로그용 시도 번호(타임아웃 재시도 포함)
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    // 각 시도의 타임아웃은 남은 시간 예산을 넘지 않는다.
+    const remaining = options.deadline - Date.now();
+    if (remaining <= 0) {
+      throw new Error("Gemini API 응답 시간 초과 (시간 예산 소진)");
+    }
+
+    tryNo += 1;
+    const startedAt = Date.now();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = setTimeout(() => controller.abort(), Math.min(attemptTimeoutMs, remaining));
 
     let response: Response;
     try {
@@ -95,13 +156,15 @@ async function callInteractions(
       });
     } catch (error) {
       if (isAbortError(error)) {
-        if (!timeoutRetried) {
+        logAttempt(options.kind, tryNo, model, startedAt, "timeout");
+        if (!timeoutRetried && options.deadline - Date.now() > 0) {
           timeoutRetried = true;
           attempt -= 1; // 상태코드 재시도 횟수를 소모하지 않고 한 번 더 시도한다.
           continue;
         }
         throw new Error("Gemini API 응답 시간 초과");
       }
+      logAttempt(options.kind, tryNo, model, startedAt, "network");
       throw error;
     } finally {
       clearTimeout(timer);
@@ -111,6 +174,9 @@ async function callInteractions(
       return await response.json();
     }
 
+    const errorStatus = await readErrorStatus(response);
+    logAttempt(options.kind, tryNo, model, startedAt, response.status, errorStatus);
+
     if (!RETRYABLE_STATUSES.has(response.status)) {
       throw new Error(`Gemini API 요청이 실패했습니다 (status ${response.status})`);
     }
@@ -119,7 +185,13 @@ async function callInteractions(
       throw new Error(`Gemini API 요청이 실패했습니다 (status ${response.status}, 재시도 ${attempt - 1}회)`);
     }
 
-    await sleep(HTTP_RETRY_DELAYS_MS[attempt - 1]);
+    const delay = retryDelayMs(attempt - 1, response);
+    if (options.deadline - Date.now() <= delay) {
+      // 남은 예산이 대기 시간보다 짧으면 더 기다리지 않고 바로 실패 처리한다.
+      throw new Error(`Gemini API 요청이 실패했습니다 (status ${response.status}, 시간 예산 부족)`);
+    }
+
+    await sleep(delay);
   }
 
   // 위 루프는 항상 return 또는 throw로 끝난다. 타입 체커를 위한 안전망.
@@ -172,9 +244,12 @@ function extractOutputText(raw: unknown): string {
 
 export async function generateJson(prompt: string, options?: GenerateJsonOptions): Promise<unknown> {
   let lastError: unknown;
+  // 시간 예산은 JSON 파싱 재시도까지 합쳐서 적용한다.
+  const deadline = Date.now() + (options?.budgetMs ?? DEFAULT_JSON_BUDGET_MS);
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const raw = await callInteractions(prompt, options);
+    if (attempt > 0 && deadline - Date.now() <= 0) break;
+    const raw = await callInteractions(prompt, { ...options, kind: "json", deadline });
 
     let text: string;
     try {
@@ -219,6 +294,7 @@ export async function generateTextFromImages(
     })),
   ];
 
-  const raw = await callInteractions(input, { ...options, plainText: true });
+  const deadline = Date.now() + (options?.budgetMs ?? DEFAULT_IMAGES_BUDGET_MS);
+  const raw = await callInteractions(input, { ...options, plainText: true, kind: "images", deadline });
   return extractOutputText(raw);
 }
