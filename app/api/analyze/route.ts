@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { analyzeContract, PIIDetectedError } from "@/lib/analyze";
 
+export const maxDuration = 60;
+
 const MAX_TEXT_LENGTH = 20000;
 
 type AnalyzeRequest = {
