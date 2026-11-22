@@ -170,7 +170,7 @@ export default function Home() {
               src="/cat-hero.png"
               alt="안경을 쓴 고양이가 계약서의 한 줄에 노란 형광펜을 칠하고 있는 그림"
               className={styles.heroImg}
-              width={730}
+              width={770}
               height={368}
               loading="eager"
               decoding="async"
@@ -277,19 +277,8 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        <div className={styles.footerText}>
-          <p>{result?.notice ?? "AI가 생성한 결과이며 법률 자문이 아닌 점검 도구입니다."}</p>
-          <p>AI는 틀릴 수 있습니다. 중요한 계약은 전문가와 상담하세요.</p>
-        </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/cat-peek.png"
-          alt=""
-          className={styles.peek}
-          width={300}
-          height={259}
-          decoding="async"
-        />
+        <p>{result?.notice ?? "AI가 생성한 결과이며 법률 자문이 아닌 점검 도구입니다."}</p>
+        <p>AI는 틀릴 수 있습니다. 중요한 계약은 전문가와 상담하세요.</p>
       </footer>
     </div>
   );
