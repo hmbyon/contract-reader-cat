@@ -147,7 +147,14 @@ export default function Home() {
       <main className={styles.main}>
         <header className={styles.siteHeader}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mascot-logo.svg" alt="" className={styles.logo} width={56} height={47} />
+          <img
+            src="/cat-logo.png"
+            alt=""
+            className={styles.logo}
+            width={56}
+            height={47}
+            decoding="async"
+          />
           <span className={styles.brand}>계읽냥</span>
         </header>
 
@@ -158,14 +165,15 @@ export default function Home() {
             <p className={styles.lead}>복잡한 계약서도, 이제는 쉽게 확인해요</p>
           </div>
           <div className={styles.heroArt}>
-            <p className={styles.bubble}>이 조항, 괜찮은 거냥?</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/mascot-hero.svg"
+              src="/cat-hero.png"
               alt="안경을 쓴 고양이가 계약서의 한 줄에 노란 형광펜을 칠하고 있는 그림"
               className={styles.heroImg}
-              width={520}
-              height={400}
+              width={730}
+              height={368}
+              loading="eager"
+              decoding="async"
             />
           </div>
           <span className={`${styles.paw} ${styles.pawA}`} aria-hidden="true" />
@@ -274,7 +282,14 @@ export default function Home() {
           <p>AI는 틀릴 수 있습니다. 중요한 계약은 전문가와 상담하세요.</p>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mascot-peek.svg" alt="" className={styles.peek} width={200} height={120} />
+        <img
+          src="/cat-peek.png"
+          alt=""
+          className={styles.peek}
+          width={300}
+          height={259}
+          decoding="async"
+        />
       </footer>
     </div>
   );

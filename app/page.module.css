@@ -1,5 +1,5 @@
 .page {
-  --bg: #fff8e8;
+  --bg: #fdf7eb;
   --surface: #fffdf8;
   --text: #3a2f2a;
   --muted: #6f6358;
@@ -8,7 +8,7 @@
   --butter: #ffd95a;
   --butter-deep: #f2c230;
   --hl: #ffe45c;
-  --blob: #fff0bd;
+  --blob: #fef1cf;
   --shadow: 0 6px 22px rgba(120, 90, 30, 0.1);
   position: relative;
   min-height: 100vh;
@@ -41,6 +41,7 @@
 }
 
 .blobRight {
+  display: none; /* 히어로 이미지가 자체 노란 배경을 가지고 있어 겹치면 이음새가 보인다 */
   top: 90px;
   right: -180px;
   width: 640px;
@@ -82,6 +83,7 @@
 /* ---------- hero ---------- */
 .hero {
   position: relative;
+  margin-bottom: -2.6rem;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
@@ -115,44 +117,23 @@
 
 .heroArt {
   position: relative;
-  padding-top: 3.5rem;
 }
 
+/* 이미지 가장자리(위·좌·우)를 페이지 배경으로 부드럽게 녹인다. 아래쪽은 입력 카드 뒤로 들어간다. */
 .heroImg {
   display: block;
   width: 100%;
-  max-width: 520px;
+  max-width: 560px;
   height: auto;
   margin-left: auto;
-}
-
-.bubble {
-  position: absolute;
-  top: 0;
-  left: 4%;
-  max-width: 11rem;
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: 999px;
-  padding: 0.55rem 1.1rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  box-shadow: var(--shadow);
-  transform: rotate(-4deg);
-  z-index: 2;
-}
-
-.bubble::after {
-  content: "";
-  position: absolute;
-  left: 58%;
-  bottom: -9px;
-  width: 16px;
-  height: 16px;
-  background: var(--surface);
-  border-right: 2px solid var(--border);
-  border-bottom: 2px solid var(--border);
-  transform: rotate(45deg);
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(to bottom, transparent, #000 9%, #000);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(to bottom, transparent, #000 9%, #000);
+  mask-composite: intersect;
 }
 
 .paw {
@@ -220,6 +201,8 @@
 
 /* ---------- input card ---------- */
 .inputCard {
+  position: relative;
+  z-index: 2;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 32px;
@@ -556,37 +539,51 @@
 }
 
 .footerText {
-  max-width: calc(100% - 190px);
+  max-width: calc(100% - 250px);
 }
 
 .peek {
   position: absolute;
-  right: 1rem;
+  right: 0.5rem;
   bottom: 0;
-  width: 170px;
+  width: 230px;
   height: auto;
   pointer-events: none;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 8%, #000 92%, transparent),
+    linear-gradient(to bottom, transparent, #000 8%, #000);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 8%, #000 92%, transparent),
+    linear-gradient(to bottom, transparent, #000 8%, #000);
+  mask-composite: intersect;
 }
 
 /* ---------- mobile ---------- */
 @media (max-width: 720px) {
+  .blobLeft {
+    display: none;
+  }
+
   .hero {
     grid-template-columns: 1fr;
     gap: 0.5rem;
+    margin-bottom: 0;
   }
 
   .heroArt {
     order: -1;
-    padding-top: 3rem;
   }
 
   .heroImg {
     margin: 0 auto;
-    max-width: 360px;
-  }
-
-  .bubble {
-    left: 6%;
+    max-width: 380px;
+    -webkit-mask-image:
+      linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+      linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+    mask-image:
+      linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+      linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
   }
 
   .heroText {
@@ -617,11 +614,9 @@
 
   .footerText {
     max-width: 100%;
-    padding-bottom: 3.5rem;
   }
 
   .peek {
-    width: 96px;
-    right: 0.5rem;
+    display: none;
   }
 }
