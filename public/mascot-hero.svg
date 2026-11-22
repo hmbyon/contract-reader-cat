@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 400" fill="none" stroke="#3A2F2A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <!-- body -->
+  <ellipse cx="290" cy="340" rx="135" ry="95" fill="#FFEFC9"/>
+  <!-- ears -->
+  <path d="M185 125 L190 40 L268 74 Z" fill="#FFEFC9"/>
+  <path d="M198 108 L201 62 L243 82 Z" fill="#F9B8B8" stroke="none"/>
+  <path d="M395 125 L390 40 L312 74 Z" fill="#FFEFC9"/>
+  <path d="M382 108 L379 62 L337 82 Z" fill="#F9B8B8" stroke="none"/>
+  <!-- head -->
+  <circle cx="290" cy="175" r="116" fill="#FFEFC9"/>
+  <!-- cheeks -->
+  <ellipse cx="206" cy="218" rx="21" ry="13" fill="#F9B8B8" stroke="none" opacity="0.7"/>
+  <ellipse cx="374" cy="218" rx="21" ry="13" fill="#F9B8B8" stroke="none" opacity="0.7"/>
+  <!-- glasses -->
+  <circle cx="244" cy="172" r="40" fill="#FFFFFF" stroke-width="5"/>
+  <circle cx="336" cy="172" r="40" fill="#FFFFFF" stroke-width="5"/>
+  <path d="M284 168 Q290 162 296 168" stroke-width="5"/>
+  <!-- eyes -->
+  <circle cx="250" cy="176" r="14" fill="#3A2F2A" stroke="none"/>
+  <circle cx="330" cy="176" r="14" fill="#3A2F2A" stroke="none"/>
+  <circle cx="255" cy="170" r="4.5" fill="#FFFFFF" stroke="none"/>
+  <circle cx="335" cy="170" r="4.5" fill="#FFFFFF" stroke="none"/>
+  <!-- nose and mouth -->
+  <ellipse cx="290" cy="212" rx="7" ry="5" fill="#F29AA6" stroke-width="2"/>
+  <path d="M290 218 Q284 230 272 224 M290 218 Q296 230 308 224" stroke-width="2.5"/>
+  <!-- whiskers -->
+  <path d="M186 206 L146 198 M186 218 L148 228"/>
+  <path d="M394 206 L434 198 M394 218 L432 228"/>
+  <!-- paper -->
+  <path d="M110 400 L146 276 Q149 266 159 265 L436 252 Q447 252 450 262 L476 400 Z" fill="#FFFDF7"/>
+  <path d="M172 292 L404 282" stroke="#E4DDD0" stroke-width="10"/>
+  <path d="M176 322 L336 316" stroke="#FFE45C" stroke-width="22"/>
+  <path d="M176 352 L420 344" stroke="#E4DDD0" stroke-width="10"/>
+  <path d="M184 380 L330 376" stroke="#E4DDD0" stroke-width="10"/>
+  <!-- right paw on paper edge -->
+  <path d="M372 262 Q372 242 394 242 Q418 242 418 262 Q418 280 394 280 Q372 280 372 262 Z" fill="#FFEFC9"/>
+  <path d="M388 252 L388 262 M402 252 L402 262" stroke-width="2.5"/>
+  <!-- highlighter held by left paw -->
+  <g transform="translate(180 318) rotate(16)">
+    <path d="M-9 0 L9 0 L14 -28 L-14 -28 Z" fill="#FFE45C"/>
+    <rect x="-14" y="-128" width="28" height="100" rx="5" fill="#FFD95A"/>
+    <rect x="-14" y="-150" width="28" height="22" rx="5" fill="#6B5E55"/>
+    <circle cx="0" cy="-64" r="25" fill="#FFEFC9"/>
+    <path d="M-12 -74 L-12 -66 M0 -76 L0 -68" stroke-width="2.5"/>
+  </g>
+</svg>

@@ -141,53 +141,92 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
+      <span className={`${styles.blob} ${styles.blobLeft}`} aria-hidden="true" />
+      <span className={`${styles.blob} ${styles.blobRight}`} aria-hidden="true" />
+
       <main className={styles.main}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>계읽냥</h1>
-          <p className={styles.subtitle}>서명 전에 계약서를 먼저 읽어 주는 AI 점검 도구</p>
+        <header className={styles.siteHeader}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mascot-logo.svg" alt="" className={styles.logo} width={56} height={47} />
+          <span className={styles.brand}>계읽냥</span>
         </header>
 
-        <div className={styles.banner} role="note">
-          가상 계약서만 입력하세요. 실제 이름·연락처·주민번호는 넣지 마세요.
-        </div>
+        <section className={styles.hero}>
+          <div className={styles.heroText}>
+            <h1 className={styles.title}>계읽냥</h1>
+            <p className={styles.subtitle}>서명 전에 계약서를 먼저 읽어 주는 AI 점검 도구</p>
+            <p className={styles.lead}>복잡한 계약서도, 이제는 쉽게 확인해요</p>
+          </div>
+          <div className={styles.heroArt}>
+            <p className={styles.bubble}>이 조항, 괜찮은 거냥?</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/mascot-hero.svg"
+              alt="안경을 쓴 고양이가 계약서의 한 줄에 노란 형광펜을 칠하고 있는 그림"
+              className={styles.heroImg}
+              width={520}
+              height={400}
+            />
+          </div>
+          <span className={`${styles.paw} ${styles.pawA}`} aria-hidden="true" />
+          <span className={`${styles.paw} ${styles.pawB}`} aria-hidden="true" />
+          <span className={styles.sparkle} aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </section>
 
-        <section className={styles.inputSection}>
-          <label htmlFor="contract-text" className={styles.label}>
-            계약서 내용
-          </label>
-          <textarea
-            id="contract-text"
-            className={styles.textarea}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="점검할 계약서 내용을 붙여 넣거나 아래 샘플을 불러오세요."
-            rows={12}
-          />
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => setText(SAMPLES.work)}
-            >
-              근로계약서 샘플
-            </button>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => setText(SAMPLES.rent)}
-            >
-              월세 계약서 샘플
-            </button>
-            <button
-              type="button"
-              className={styles.primaryButton}
-              onClick={handleAnalyze}
-              disabled={loading || text.trim().length === 0}
-            >
-              {loading ? "점검 중…" : "점검하기"}
-            </button>
+        <section className={styles.inputCard}>
+          <div className={styles.inputInner}>
+            <p className={styles.banner} role="note">
+              가상 계약서만 입력하세요. 실제 이름·연락처·주민번호는 넣지 마세요.
+            </p>
+            <label htmlFor="contract-text" className={styles.label}>
+              계약서 내용
+            </label>
+            <textarea
+              id="contract-text"
+              className={styles.textarea}
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="점검할 계약서 내용을 붙여 넣거나 아래 샘플을 불러오세요."
+              rows={12}
+            />
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => setText(SAMPLES.work)}
+              >
+                근로계약서 샘플
+              </button>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => setText(SAMPLES.rent)}
+              >
+                월세 계약서 샘플
+              </button>
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={handleAnalyze}
+                disabled={loading || text.trim().length === 0}
+              >
+                {loading ? "점검 중…" : "점검하기"}
+              </button>
+            </div>
           </div>
         </section>
+
+        {loading && (
+          <div className={styles.loading} role="status">
+            <p className={styles.loadingText}>
+              <span className={styles.loadingMark}>계읽냥이 계약서를 읽는 중…</span>
+            </p>
+          </div>
+        )}
 
         {error && (
           <p className={styles.error} role="alert">
@@ -230,8 +269,12 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        <p>{result?.notice ?? "AI가 생성한 결과이며 법률 자문이 아닌 점검 도구입니다."}</p>
-        <p>AI는 틀릴 수 있습니다. 중요한 계약은 전문가와 상담하세요.</p>
+        <div className={styles.footerText}>
+          <p>{result?.notice ?? "AI가 생성한 결과이며 법률 자문이 아닌 점검 도구입니다."}</p>
+          <p>AI는 틀릴 수 있습니다. 중요한 계약은 전문가와 상담하세요.</p>
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mascot-peek.svg" alt="" className={styles.peek} width={200} height={120} />
       </footer>
     </div>
   );
