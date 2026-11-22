@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { AnalyzeResult, Finding } from "@/lib/analyze";
 import { SAMPLES } from "@/lib/samples";
+import { pdfToImages } from "@/lib/pdfToImages";
 import MaskEditor from "./MaskEditor";
 import styles from "./page.module.css";
 
@@ -11,6 +12,7 @@ const FAILURE_MESSAGE = "분석에 실패했습니다. 잠시 후 다시 시도�
 const MAX_IMAGES = 5;
 const MAX_TEXT_FILE_BYTES = 200 * 1024;
 const MAX_IMAGE_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_PDF_FILE_BYTES = 20 * 1024 * 1024;
 const READ_FAILURE_MESSAGE = "글자 읽기에 실패했어요. 잠시 후 다시 시도해 주세요";
 const UNREADABLE_TOKEN = "[판독불가]";
 
@@ -143,6 +145,9 @@ export default function Home() {
   const [reading, setReading] = useState(false);
   const [ocrNote, setOcrNote] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [pendingIsPdf, setPendingIsPdf] = useState(false);
+  const [pdfTruncated, setPdfTruncated] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chipIdRef = useRef(0);
 
@@ -153,23 +158,51 @@ export default function Home() {
 
   async function handleFiles(fileList: FileList | File[]) {
     const files = Array.from(fileList);
-    if (files.length === 0 || reading) return;
+    if (files.length === 0 || reading || converting) return;
     setUploadError(null);
 
-    if (files.some(isPdfFile)) {
-      setUploadError("PDF는 아직 지원하지 않아요. 화면을 캡처하거나 사진으로 찍어 올려 주세요");
+    const texts = files.filter(isTextFile);
+    const pdfs = files.filter((file) => !isTextFile(file) && isPdfFile(file));
+    const images = files.filter(
+      (file) => !isTextFile(file) && !isPdfFile(file) && isImageFile(file)
+    );
+
+    if (texts.length + images.length + pdfs.length !== files.length) {
+      setUploadError("지원하지 않는 형식이에요. 사진(JPG·PNG 등)이나 .txt 파일을 올려 주세요");
       return;
     }
-
-    const texts = files.filter(isTextFile);
-    const images = files.filter((file) => !isTextFile(file) && isImageFile(file));
-
-    if (texts.length + images.length !== files.length) {
-      setUploadError("지원하지 않는 형식이에요. 사진(JPG·PNG 등)이나 .txt 파일을 올려 주세요");
+    if (pdfs.length > 0 && files.length !== pdfs.length) {
+      setUploadError("사진, PDF, 텍스트 파일은 한 종류만 올려 주세요");
       return;
     }
     if (texts.length > 0 && images.length > 0) {
       setUploadError("텍스트 파일과 사진은 따로 올려 주세요");
+      return;
+    }
+
+    if (pdfs.length > 0) {
+      if (pdfs.length > 1) {
+        setUploadError("PDF는 한 번에 1개만 올릴 수 있어요");
+        return;
+      }
+      const pdf = pdfs[0];
+      if (pdf.size > MAX_PDF_FILE_BYTES) {
+        setUploadError("PDF 용량이 너무 커요. 20MB 이하로 올려 주세요");
+        return;
+      }
+
+      setConverting(true);
+      try {
+        const pages = await pdfToImages(pdf);
+        setChips([{ id: nextChipId(), name: pdf.name }]);
+        setPdfTruncated(pages.truncated);
+        setPendingIsPdf(true);
+        setPendingImages(pages.files);
+      } catch {
+        setUploadError("열 수 없는 PDF예요");
+      } finally {
+        setConverting(false);
+      }
       return;
     }
 
@@ -204,13 +237,18 @@ export default function Home() {
     }
 
     setChips(images.map((file) => ({ id: nextChipId(), name: file.name })));
+    setPdfTruncated(false);
+    setPendingIsPdf(false);
     setPendingImages(images);
   }
 
   function handleRemoveChip(id: number, index: number) {
     setChips((prev) => prev.filter((chip) => chip.id !== id));
     // 가리기 대기 중인 사진이면 목록에서도 뺀다. 입력창 내용은 그대로 둔다.
-    setPendingImages((prev) => (prev.length > 0 ? prev.filter((_, i) => i !== index) : prev));
+    // PDF는 칩 하나가 여러 쪽이므로 통째로 닫는다.
+    setPendingImages((prev) =>
+      pendingIsPdf ? [] : prev.length > 0 ? prev.filter((_, i) => i !== index) : prev
+    );
   }
 
   function handleMaskCancel() {
@@ -383,7 +421,7 @@ export default function Home() {
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept="image/*,.txt,text/plain"
+                  accept="image/*,.txt,text/plain,.pdf,application/pdf"
                   className={styles.fileInput}
                   tabIndex={-1}
                   onChange={(event) => {
@@ -395,12 +433,12 @@ export default function Home() {
                   type="button"
                   className={styles.uploadButton}
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={reading}
+                  disabled={reading || converting}
                 >
                   사진 올리기
                 </button>
                 <p className={styles.dropHint}>
-                  계약서 사진(최대 5장)이나 .txt 파일을 여기에 끌어다 놓아도 돼요
+                  계약서 사진(최대 5장), PDF, .txt 파일을 여기에 끌어다 놓아도 돼요
                 </p>
               </div>
             )}
@@ -427,6 +465,12 @@ export default function Home() {
             {uploadError && (
               <p className={styles.uploadError} role="alert">
                 {uploadError}
+              </p>
+            )}
+
+            {pendingImages.length > 0 && pdfTruncated && (
+              <p className={styles.ocrNote} role="note">
+                처음 5쪽만 읽어요
               </p>
             )}
 
@@ -476,6 +520,14 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {converting && (
+          <div className={styles.loading} role="status">
+            <p className={styles.loadingText}>
+              <span className={styles.loadingMark}>PDF를 여는 중…</span>
+            </p>
+          </div>
+        )}
 
         {reading && (
           <div className={styles.loading} role="status">
