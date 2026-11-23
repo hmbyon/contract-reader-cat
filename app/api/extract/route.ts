@@ -3,7 +3,14 @@ import { ExtractEmptyError, ExtractInputError, extractText, parseImages } from "
 
 export const maxDuration = 60;
 
+const MAX_BODY_BYTES = 3_200_000;
+
 export async function POST(request: Request) {
+  // content-length가 없거나 숫자가 아니면(NaN) 통과시키고 아래 검사에 맡긴다.
+  if (Number(request.headers.get("content-length")) > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "요청이 너무 큽니다." }, { status: 413 });
+  }
+
   let body: unknown;
 
   try {

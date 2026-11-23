@@ -56,16 +56,21 @@ export function parseImages(body: unknown): ImageInput[] {
     if (mimeType !== ALLOWED_MIME_TYPE) {
       throw new ExtractInputError("JPEG 이미지만 보낼 수 있어요");
     }
-    if (typeof data !== "string" || data.length === 0 || !BASE64_PATTERN.test(data)) {
+    if (typeof data !== "string" || data.length === 0) {
+      throw new ExtractInputError("이미지 형식이 올바르지 않아요");
+    }
+
+    // 길이 상한을 정규식 검사보다 먼저 확인한다.
+    total += data.length;
+    if (total > MAX_TOTAL_BASE64_CHARS) {
+      throw new ExtractInputError("이미지 용량이 너무 커요. 장수를 줄이거나 더 작은 사진을 올려 주세요");
+    }
+
+    if (!BASE64_PATTERN.test(data)) {
       throw new ExtractInputError("이미지 형식이 올바르지 않아요");
     }
     if (!data.startsWith(JPEG_BASE64_PREFIX)) {
       throw new ExtractInputError("이미지 형식이 올바르지 않아요");
-    }
-
-    total += data.length;
-    if (total > MAX_TOTAL_BASE64_CHARS) {
-      throw new ExtractInputError("이미지 용량이 너무 커요. 장수를 줄이거나 더 작은 사진을 올려 주세요");
     }
 
     images.push({ mimeType, data });
