@@ -93,15 +93,13 @@
   position: relative;
 }
 
-/* 좌·우 가장자리만 좁게 페이드한다. 위쪽은 귀 끝이 흐려지지 않게 페이드하지 않고, 아래쪽은 입력 카드 뒤로 들어간다. */
+/* 이미지 배경이 투명하므로 가장자리 페이드가 필요 없다. 아래쪽은 입력 카드 뒤로 들어간다. */
 .heroImg {
   display: block;
   width: 100%;
   max-width: 600px;
   height: auto;
   margin-left: auto;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
 }
 
 /* ---------- input card ---------- */
@@ -566,14 +564,8 @@
   .heroImg {
     margin: 0 auto;
     max-width: 440px;
-    -webkit-mask-image:
-      linear-gradient(to right, transparent, #000 4%, #000 96%, transparent),
-      linear-gradient(to bottom, #000, #000 92%, transparent);
-    -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(to right, transparent, #000 4%, #000 96%, transparent),
-      linear-gradient(to bottom, #000, #000 92%, transparent);
-    mask-composite: intersect;
+    -webkit-mask-image: linear-gradient(to bottom, #000, #000 92%, transparent);
+    mask-image: linear-gradient(to bottom, #000, #000 92%, transparent);
   }
 
   .heroText {
