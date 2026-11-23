@@ -425,7 +425,7 @@ export default function Home() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={reading || converting}
                 >
-                  사진 올리기
+                  파일 올리기
                 </button>
                 <p className={styles.dropHint}>
                   계약서 사진(최대 5장), PDF, .txt 파일을 여기에 끌어다 놓아도 돼요
