@@ -343,9 +343,6 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
-      <span className={`${styles.blob} ${styles.blobLeft}`} aria-hidden="true" />
-      <span className={`${styles.blob} ${styles.blobRight}`} aria-hidden="true" />
-
       <main className={styles.main}>
         <header className={styles.siteHeader}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -378,13 +375,6 @@ export default function Home() {
               decoding="async"
             />
           </div>
-          <span className={`${styles.paw} ${styles.pawA}`} aria-hidden="true" />
-          <span className={`${styles.paw} ${styles.pawB}`} aria-hidden="true" />
-          <span className={styles.sparkle} aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
         </section>
 
         <section className={styles.inputCard}>
