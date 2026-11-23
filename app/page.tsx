@@ -380,7 +380,7 @@ export default function Home() {
         <section className={styles.inputCard}>
           <div className={styles.inputInner}>
             <p className={styles.banner} role="note">
-              계약서의 이름·주소·연락처·주민번호·계좌번호는 꼭 가린 뒤 입력하세요. (주민번호·전화번호·이메일은 자동으로 막아요)
+              계약서의 이름·주소·연락처·주민번호·계좌번호는 꼭 직접 가린 뒤 입력하세요. (주민번호·전화번호·이메일이 발견되면 분석을 멈춰요)
             </p>
             {pendingImages.length > 0 ? (
               <MaskEditor
